@@ -1,0 +1,16 @@
+# Prerequisites
+*.d
+
+# Object files
+ *.o
+
+# Executables
+*.exe
+
+# Game data
+*.WL6
+*.SOD
+
+# Temp files
+*.su
+*.map

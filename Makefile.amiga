@@ -1,0 +1,191 @@
+#CONFIG ?= config.default
+#-include $(CONFIG)
+
+CC = m68k-amigaos-gcc
+CXX = m68k-amigaos-g++
+AS = vasm -Faout -m68020
+STRIP = m68k-amigaos-strip -K ___stack
+DEBUG = 0
+NO_DEPS = 1
+KALMS_C2P = 1
+
+ARCH =  -noixemul -m68020 -msoft-float
+CFLAGS = -Wall $(ARCH)
+# -fsigned-char
+#CFLAGS += --save-temp
+#CFLAGS += -fstack-usage
+CFLAGS += -DUSE_DOUBLEBUFFER
+CFLAGS += -DUSE_AUTOMAP
+CFLAGS += -DUSE_HALFWIDTH
+# Spear of Destiny
+#CFLAGS += -DSPEAR
+
+ifeq ($(DEBUG), 1)
+CFLAGS += -g
+else
+CFLAGS += -O2 -fomit-frame-pointer
+endif
+
+BINARY    ?= wolf3d
+#PREFIX    ?= /usr/local
+#MANPREFIX ?= $(PREFIX)
+
+#INSTALL         ?= install
+#INSTALL_PROGRAM ?= $(INSTALL) -m 555 -s
+#INSTALL_MAN     ?= $(INSTALL) -m 444
+#INSTALL_DATA    ?= $(INSTALL) -m 444
+
+
+#SDL_CONFIG  ?= sdl-config
+#CFLAGS_SDL  ?= $(shell $(SDL_CONFIG) --cflags)
+#LDFLAGS_SDL ?= $(shell $(SDL_CONFIG) --libs)
+
+
+CFLAGS += $(CFLAGS_SDL)
+
+#CFLAGS += -Wall
+#CFLAGS += -W
+CFLAGS += -Wpointer-arith
+CFLAGS += -Wreturn-type
+CFLAGS += -Wwrite-strings
+#CFLAGS += -Wcast-align
+CFLAGS +=  -Wno-switch
+
+
+CCFLAGS += $(CFLAGS)
+CCFLAGS += -std=gnu99
+#CCFLAGS +=  -std=c99
+CCFLAGS += -Werror-implicit-function-declaration
+CCFLAGS += -Wimplicit-int
+CCFLAGS += -Wsequence-point
+
+CXXFLAGS += $(CFLAGS) -fno-exceptions -fno-rtti
+
+#LDFLAGS += $(LDFLAGS_SDL)
+#LDFLAGS += -lSDL_mixer
+LDFLAGS = -lm $(ARCH)
+
+SRCS :=
+#SRCS += fmopl.c
+SRCS += id_ca.c
+SRCS += id_in.c
+#SRCS += id_pm.c
+SRCS += id_pm_amiga.c
+#SRCS += id_sd.c
+SRCS += id_sd_amiga.c
+SRCS += id_us_1.c
+SRCS += id_vh.c
+SRCS += id_vl.c
+#SRCS += signon.c
+SRCS += wl_act1.c
+SRCS += wl_act2.c
+SRCS += wl_agent.c
+#SRCS += wl_atmos.c
+#SRCS += wl_cloudsky.c
+SRCS += wl_debug.c
+SRCS += wl_draw.c
+#SRCS += wl_floorceiling.c
+SRCS += wl_game.c
+SRCS += wl_inter.c
+SRCS += wl_main.c
+SRCS += wl_menu.c
+#SRCS += wl_parallax.c
+SRCS += wl_play.c
+SRCS += wl_state.c
+SRCS += wl_text.c
+#SRCS += gettimeofday.c
+SRCS += timer_amiga.c
+SRCS += vfprintf.c
+#SRCS += wl_scale.c
+
+ifeq ($(KALMS_C2P),1)
+CFLAGS += -DKALMS_C2P
+C2P_SRCS = c2p1x1_8_c5_bm.s c2p1x1_6_c5_bm.s
+C2P_SRCS += c2p2x1_8_c5_bm.s
+endif
+
+CONVERT_SRC = \
+	vfprintf.c \
+	id_ca.c \
+	id_sd.cpp \
+	convert.c
+
+#CONVERT_SRC += fmopl.c
+#CFLAGS += -DNUKED_OPL
+#CONVERT_SRC += opl3.c
+CONVERT_SRC += dbopl.cpp
+CXXFLAGS += -DDOSBOX_OPL
+
+PATCHER_SRC = \
+	vfprintf.c \
+	patcher.c
+
+DEPS = $(filter %.d, $(SRCS:.c=.d) $(SRCS:.cpp=.d))
+OBJS = $(filter %.o, $(SRCS:.c=.o) $(SRCS:.cpp=.o))
+C2P_OBJS = $(filter %.o, $(C2P_SRCS:.s=.o))
+CONVERT_OBJS = $(filter %.o, $(CONVERT_SRC:.c=.o) $(CONVERT_SRC:.cpp=.o))
+PATCHER_OBJS = $(filter %.o, $(PATCHER_SRC:.c=.o))
+
+.SUFFIXES:
+.SUFFIXES: .c .cpp .d .o .s
+
+#Q ?= @
+
+all: $(BINARY) convert-sounds patch-data
+
+ifndef NO_DEPS
+depend: $(DEPS)
+
+ifeq ($(findstring $(MAKECMDGOALS), clean depend Data),)
+-include $(DEPS)
+endif
+endif
+
+$(BINARY): $(OBJS) $(C2P_OBJS)
+	@echo '===> LD $@'
+	$(Q)$(CC) $^ $(LDFLAGS) -Wl,-Map=$@.map -o $@
+ifeq ($(DEBUG),0)
+	$(STRIP) $@
+endif
+
+convert-sounds: $(CONVERT_OBJS)
+	@echo '===> LD $@'
+	$(Q)$(CXX) -o $@ $^ $(LDFLAGS) -Wl,-Map=$@.map
+ifeq ($(DEBUG),0)
+	$(STRIP) $@
+endif
+
+patch-data: $(PATCHER_OBJS)
+	@echo '===> LD $@'
+	$(Q)$(CC) -o $@ $^ $(LDFLAGS)
+ifeq ($(DEBUG),0)
+	$(STRIP) $@
+endif
+
+.c.o:
+	@echo '===> CC $<'
+	$(Q)$(CC) $(CCFLAGS) -c $< -o $@
+
+.cpp.o:
+	@echo '===> CXX $<'
+	$(Q)$(CXX) $(CXXFLAGS) -c $< -o $@
+
+.c.d:
+	@echo '===> DEP $<'
+	$(Q)$(CC) $(CCFLAGS) -MM $< | sed 's#^$(@F:%.d=%.o):#$@ $(@:%.d=%.o):#' > $@
+
+.cpp.d:
+	@echo '===> DEP $<'
+	$(Q)$(CXX) $(CXXFLAGS) -MM $< | sed 's#^$(@F:%.d=%.o):#$@ $(@:%.d=%.o):#' > $@
+
+.s.o:
+	$(AS) $< -o $@
+
+clean distclean:
+	@echo '===> CLEAN'
+	$(Q)rm -fr $(DEPS) $(OBJS) $(C2P_OBJS) $(BINARY) $(CONVERT_OBJS) convert-sounds $(PATCHER_OBJS) patch-data
+
+#install: $(BINARY)
+#	@echo '===> INSTALL'
+#	$(Q)$(INSTALL) -d $(PREFIX)/bin
+#	$(Q)$(INSTALL_PROGRAM) $(BINARY) $(PREFIX)/bin
