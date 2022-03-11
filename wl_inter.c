@@ -1127,6 +1127,13 @@ PreloadGraphics (void)
 				PreloadSound(OPENDOORSND);
 				PreloadSound(CLOSEDOORSND);
 			}
+			else if (tile & 0x40)
+			{
+				tile &= ~0x40; // clear the adjacent door marker bit
+				//printf("%s x %2d y %2d tile %2d horizwall %d vertwall %d\n", __FUNCTION__, x, y, tile, horizwall[tile], vertwall[tile]);
+				PreloadWall(horizwall[tile]);
+				PreloadWall(vertwall[tile]);
+			}
 			if (*(mapsegs[1]+(x<<mapshift)+y) == PUSHABLETILE)
 			{
 				PreloadSound(NOWAYSND);
