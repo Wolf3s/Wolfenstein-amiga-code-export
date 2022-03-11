@@ -54,6 +54,13 @@ CheckForEpisodes (void)
     strcpy (audioext, extension);
 }
 
+void ShutdownId (void)
+{
+	//printf("Conversion shutdown...\n");
+	SD_Shutdown ();
+	CA_Shutdown ();
+	//CloseAudioFile();
+}
 
 void VL_MemToScreen (byte *source, int width, int height, int x, int y) {}
 
@@ -109,6 +116,7 @@ int main(int argc, char *argv[])
 	CheckForEpisodes();
 	SD_Startup();
 	CAL_SetupAudioFile();
+	atexit(ShutdownId);
 
 	puts("Loading sounds...");
 	SD_SetSoundMode(sdm_AdLib);
@@ -209,11 +217,6 @@ int main(int argc, char *argv[])
 		SD_SetSoundMode(sdm_Off);
 	}
 #endif
-
-	printf("Conversion shutdown...\n");
-	SD_Shutdown ();
-	CA_Shutdown ();
-	//CloseAudioFile();
 
 	printf("Conversion finished!\n");
 
