@@ -2,9 +2,9 @@
 
 #include <string.h>
 #ifdef __AMIGA__
-//#include <cybergraphx/cybergraphics.h>
+#include <cybergraphx/cybergraphics.h>
 #include <proto/intuition.h>
-//#include <proto/cybergraphics.h>
+#include <proto/cybergraphics.h>
 #include <proto/exec.h>
 #include <proto/graphics.h>
 #include <graphics/gfxbase.h>
@@ -14,12 +14,6 @@
 #undef SIGN
 #endif
 #include "wl_def.h"
-/*#ifdef __AMIGA__
-#include <cybergraphx/cybergraphics.h>
-#include <proto/intuition.h>
-#include <proto/cybergraphics.h>
-#include <proto/exec.h>
-#endif*/
 #pragma hdrstop
 
 // Uncomment the following line, if you get destination out of bounds
@@ -28,6 +22,7 @@
 
 //#define USE_EHB
 //#define WAITFORSAFE
+#define USE_CGFX
 
 #ifdef IGNORE_BAD_DEST
 #undef assert
@@ -66,7 +61,9 @@ unsigned screenBits = -1;      // use "best" color depth according to libSDL
 /*static*/ struct Window *window = NULL;
 static UWORD *pointermem = NULL;
 static struct BitMap *tempbm = NULL;
-//struct Library *CyberGfxBase = NULL;
+#ifdef USE_CGFX
+struct Library *CyberGfxBase = NULL;
+#endif
 
 /*static struct BitMap *screenBitMaps[2];
 int currentBitMap = 0;
@@ -467,6 +464,17 @@ void VL_DrawChunkyBuffer(void)
 	}
 	else
 #endif
+#ifdef USE_CGFX
+	if (CyberGfxBase && IsCyberModeID(GetVPModeID(&screen->ViewPort)))
+	{
+#ifdef USE_HALFWIDTH
+		ScalePixelArray(chunkyBuffer, viewwidth, viewheight, viewwidth, rp, viewscreenx, viewscreeny, viewwidth*2, viewwidth, RECTFMT_LUT8);
+#else
+		WritePixelArray(chunkyBuffer, 0, 0, viewwidth, rp, viewscreenx, viewscreeny, viewwidth, viewheight, RECTFMT_LUT8);
+#endif
+	}
+	else
+#endif
 	if (GfxBase->LibNode.lib_Version >= 40)
 	{
 		WriteChunkyPixels(rp, viewscreenx, viewscreeny, viewscreenx + viewwidth - 1, viewscreeny + viewheight - 1, chunkyBuffer, viewwidth);
@@ -614,6 +622,14 @@ void	VL_Shutdown (void)
 		fontTemplate[i] = NULL;
 	}
 
+#ifdef USE_CGFX
+	if (CyberGfxBase)
+	{
+		CloseLibrary(CyberGfxBase);
+		CyberGfxBase = NULL;
+	}
+#endif
+
 	//VL_SetTextMode ();
 }
 
@@ -650,15 +666,20 @@ void	VL_SetVGAPlaneMode (void)
 	ULONG modeid = INVALID_ID;
 	ULONG depth = 8;
 
-	/*if (CyberGfxBase)
+#ifdef USE_CGFX
+	if (!CyberGfxBase)
+		CyberGfxBase = OpenLibrary((STRPTR)"cybergraphics.library", 41);
+
+	if (CyberGfxBase)
 	{
 		modeid = BestCModeIDTags(
 			CYBRBIDTG_NominalWidth, screenWidth,
 			CYBRBIDTG_NominalHeight, screenHeight,
 			CYBRBIDTG_Depth, depth,
 			TAG_DONE);
-		printf("%s:%d modeid %08x\n", __FUNCTION__, __LINE__, modeid);
-	}*/
+		//printf("%s:%d modeid %08x\n", __FUNCTION__, __LINE__, modeid);
+	}
+#endif
 
 	if (modeid == (ULONG)INVALID_ID)
 	{
