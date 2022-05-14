@@ -63,7 +63,8 @@ CXXFLAGS += $(CFLAGS) -fno-exceptions -fno-rtti
 
 #LDFLAGS += $(LDFLAGS_SDL)
 #LDFLAGS += -lSDL_mixer
-LDFLAGS = -lm $(ARCH)
+#LDFLAGS = -lm $(ARCH)
+LDFLAGS = $(ARCH)
 
 SRCS :=
 #SRCS += fmopl.c
@@ -95,7 +96,7 @@ SRCS += wl_state.c
 SRCS += wl_text.c
 #SRCS += gettimeofday.c
 SRCS += timer_amiga.c
-SRCS += vfprintf.c
+#SRCS += vfprintf.c
 #SRCS += wl_scale.c
 
 ifeq ($(KALMS_C2P),1)
@@ -105,10 +106,10 @@ C2P_SRCS += c2p2x1_8_c5_bm.s
 endif
 
 CONVERT_SRC = \
-	vfprintf.c \
 	id_ca.c \
 	id_sd.cpp \
 	convert.c
+#	vfprintf.c \
 
 #CONVERT_SRC += fmopl.c
 #CFLAGS += -DNUKED_OPL
@@ -117,8 +118,8 @@ CONVERT_SRC += dbopl.cpp
 CXXFLAGS += -DDOSBOX_OPL
 
 PATCHER_SRC = \
-	vfprintf.c \
 	patcher.c
+#	vfprintf.c \
 
 DEPS = $(filter %.d, $(SRCS:.c=.d) $(SRCS:.cpp=.d))
 OBJS = $(filter %.o, $(SRCS:.c=.o) $(SRCS:.cpp=.o))
